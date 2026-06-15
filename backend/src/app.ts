@@ -1,10 +1,11 @@
 import express from "express";
+import type { Express } from "express";
 import cors from "cors";
 import { z } from "zod";
 import { parsePrUrl, fetchPrData, GitHubError } from "./github.js";
 import { generateReview } from "./review.js";
 
-export function createApp() {
+export function createApp(): Express {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
 

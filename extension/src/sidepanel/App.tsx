@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReviewResponse } from "./types.js";
 import { ReviewResult } from "./ReviewResult.js";
 
-const DEFAULT_BACKEND = "http://localhost:8787";
+const DEFAULT_BACKEND = "https://backend-eight-umber-nc58tqjhan.vercel.app";
 const PR_URL_RE = /^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+/;
 
 type Status = "idle" | "loading" | "done" | "error";

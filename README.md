@@ -55,6 +55,39 @@ The server starts on `http://localhost:8787`. Check `http://localhost:8787/healt
 | `GITHUB_TOKEN`    | no       | Raises GitHub rate limit from 60/hr to 5000/hr. Read access only.  |
 | `PORT`            | no       | Server port (default `8787`).                                      |
 | `ALLOWED_ORIGINS` | no       | Comma-separated CORS origins, or `*` (default) to allow all.       |
+| `OPENAI_BASE_URL` | no       | OpenAI-compatible gateway base URL (e.g. OpenRouter).             |
+
+### Deploy the backend to Vercel
+
+The backend ships with a serverless entry point (`backend/api/index.ts`) and a `backend/vercel.json`, so it can run on Vercel without code changes.
+
+**Via the dashboard (recommended):**
+
+1. Go to [vercel.com/new](https://vercel.com/new) and import `https://github.com/vaibhavvv9/code-review`.
+2. Set **Root Directory** to `backend`.
+3. Framework preset: **Other** (the included `vercel.json` already defines build/install commands).
+4. Add environment variables (Settings → Environment Variables):
+   - `OPENAI_API_KEY`
+   - `OPENAI_BASE_URL` (e.g. `https://openrouter.ai/api/v1` for OpenRouter)
+   - `OPENAI_MODEL` (e.g. `openai/gpt-4o-mini`)
+   - `ALLOWED_ORIGINS` (set to your extension origin, see below)
+5. Deploy. You'll get a URL like `https://your-project.vercel.app`.
+6. Verify: open `https://your-project.vercel.app/health`.
+
+**Via the CLI:**
+
+```bash
+cd backend
+npx vercel login
+npx vercel link            # create/link the project (set root to current dir)
+npx vercel env add OPENAI_API_KEY
+npx vercel env add OPENAI_BASE_URL
+npx vercel env add OPENAI_MODEL
+npx vercel env add ALLOWED_ORIGINS
+npx vercel --prod          # deploy to production
+```
+
+Then point the extension at the deployed URL via **Settings → Backend URL** in the side panel.
 
 ## 2. Build and load the extension
 

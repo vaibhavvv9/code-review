@@ -1,0 +1,1 @@
+{"root":["./src/background/background.ts","./src/sidepanel/app.tsx","./src/sidepanel/reviewresult.tsx","./src/sidepanel/main.tsx","./src/sidepanel/types.ts","./vite.config.ts"],"version":"5.9.3"}

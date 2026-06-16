@@ -1,8 +1,13 @@
 # AI Code Review
 
-An open-source Chrome extension that generates AI-powered code reviews for GitHub pull requests. It detects the PR in your active tab, fetches the diff via the GitHub API through a small backend proxy, and shows a structured review (correctness, security, code quality, performance) in a side panel.
+An open-source AI code reviewer for GitHub pull requests. Two clients share one backend:
 
-> Scope: public GitHub repositories / public PRs. Read-only — it does not post comments back to GitHub.
+- **Web app** — paste a GitHub PR link, stream the review in your browser, and optionally post it back to the PR as inline comments.
+- **Chrome extension** — a side panel that detects the PR in your active tab and shows the same structured review.
+
+The backend fetches the diff via the GitHub API, runs it through an AI model, and returns a structured review (correctness, security, code quality, performance).
+
+> Scope: reviewing supports public GitHub repositories / public PRs. Posting a review back to a PR requires a GitHub token with write access (supplied by you in the web app, used per-request and never stored).
 
 ## Architecture
 
@@ -106,7 +111,26 @@ Then in Chrome:
 
 For live rebuilds during development, run `npm run dev` (rebuilds on change); reload the extension in `chrome://extensions` to pick up changes.
 
-## 3. Use it
+## 3. Run the web app
+
+```bash
+cd web
+npm install
+npm run dev        # dev server (Vite) on http://localhost:5173
+# or
+npm run build      # static build to web/dist
+```
+
+Open the dev URL, then:
+
+1. Paste a public GitHub pull request URL (e.g. `https://github.com/owner/repo/pull/123`).
+2. (Optional) Open **Settings** to set the backend URL (persisted in `localStorage`), choose a model, a review focus (all / correctness / security / quality / performance), and a max-comments cap.
+3. Click **Review this PR** — results stream in live (status → findings → summary).
+4. (Optional) To post the review back to the PR, expand **Post to GitHub**, paste a GitHub token with write access, and click **Post review to PR**. The token is sent once with the request and is never stored or logged.
+
+Deploy `web/dist` to any static host (Vercel, Netlify, GitHub Pages). Set the backend URL via **Settings** to your deployed backend.
+
+## 4. Use the extension
 
 1. Open any public GitHub pull request, e.g. `https://github.com/owner/repo/pull/123`.
 2. Click the extension icon to open the side panel. The PR URL is auto-detected from the active tab (you can also paste one).
@@ -116,17 +140,28 @@ The panel shows the PR metadata, an AI summary, and a list of findings sorted by
 
 If your backend runs somewhere other than `http://localhost:8787`, set it under **Settings → Backend URL** in the panel.
 
+## API endpoints
+
+| Endpoint | Description |
+| --- | --- |
+| `POST /api/review` | Body `{ prUrl, config? }`. Returns `{ pr, review }`. `config` is `{ model?, focus?, maxComments? }`. |
+| `POST /api/review/stream` | Same body; streams Server-Sent Events (`pr`, `status`, `comment`, `summary`, `done`, `error`) as the review runs. |
+| `POST /api/review/post` | Body `{ prUrl, githubToken, review }`. Posts the review to the PR as inline comments + a summary; returns `{ url, posted }`. The token is used per-request and never stored or logged. |
+| `GET /health` | Liveness check; returns the active model. |
+
 ## How the review works
 
-The backend fetches the PR's unified diff and sends it to OpenAI with a system prompt instructing the model to review only changed lines and prioritize correctness → security → code quality → performance. The model returns JSON, which the backend validates and the extension renders.
+The backend fetches the PR's unified diff and sends it to the AI model with a system prompt instructing it to review only changed lines and prioritize correctness → security → code quality → performance. The model returns JSON, which the backend validates and the clients render.
 
-Large diffs are truncated to stay within a reasonable token budget.
+For large PRs, the diff is split by file into chunks that each fit a token budget, reviewed independently (map), and merged into one summary + capped, severity-sorted findings (reduce) — so large PRs are no longer hard-truncated. The streaming endpoint emits findings as each chunk completes.
+
+When posting back to GitHub, each finding whose line maps to a changed (RIGHT-side) line in the diff becomes an inline comment; findings that can't be mapped are appended to the review summary body. The review is posted with the neutral `COMMENT` event (it never approves or requests changes).
 
 ## Limitations
 
-- Public repositories only (no auth flow for private repos yet).
-- Read-only; reviews are not posted back to the PR.
-- Very large PRs are truncated.
+- Reviewing supports public repositories only (no auth flow for private repos yet).
+- Posting a review requires a user-supplied GitHub token with write access.
+- No persistence — reviews are not stored or shareable via a link.
 
 ## License
 
